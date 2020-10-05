@@ -1,0 +1,218 @@
+# prutor-lang:python
+import math
+import numpy as np
+n=int(input())
+A=input()
+A=A[1:-1]
+B=input()
+B=B[1:-1]
+option=input()
+A=A.split()
+B=B.split()
+B=[float(i) for i in B]
+arr=[]
+augmented_arr=[]
+it=0
+for i in range(n):
+ temp=[]
+ for j in range(n):
+  if j==(n-1):
+   t_a=A[it].split(';')
+   temp.append(float(t_a[0]))
+  else:
+   temp.append(float(A[it]))
+  it+=1
+ arr.append(temp)
+for i in range(n):
+ temp=arr[i][:]
+ temp.append(B[i])
+ augmented_arr.append(temp)
+ 
+# input converted in proper format of array(list in python)
+
+permutation_matrix=[[0 for i in range(n)] for j in range(n)]
+for i in range(n):
+ for j in range(n):
+  if i==j:
+   permutation_matrix[i][j]=1
+
+def pivot(m, n, i, scale):
+ max = -1e100
+ for r in range(i, n):
+  if max < abs(m[r][i]/scale[r]):
+   max_row = r
+   max = abs(m[r][i]/scale[r]) 
+ scale[i], scale[max_row] = scale[max_row], scale[i]
+ m[i], m[max_row] = m[max_row], m[i]
+ permutation_matrix[i],permutation_matrix[max_row]=permutation_matrix[max_row],permutation_matrix[i]
+ 
+def pivot_LU(mat,temp,i,lower):
+ maxi=temp[0]
+ swap_v=0
+ for j in range(len(temp)):
+  if temp[j]>maxi:
+   maxi=temp[j]
+   swap_v=j
+ mat[i],mat[(swap_v+i)]=mat[(swap_v+i)],mat[i]
+ lower[i],lower[(swap_v+i)]=lower[(swap_v+i)],lower[i]
+ permutation_matrix[i],permutation_matrix[(swap_v+i)]=permutation_matrix[(swap_v+i)],permutation_matrix[i]
+ 
+ 
+def gaussian_elimination_with_scaled_pivot(m):
+
+  # forward elimination
+ 
+ scale = [max([abs(m[i][j]) for j in range(n)]) for i in range(n)] 
+ for i in range(n):
+  pivot(m, n, i, scale)
+  for j in range(i+1, n):
+   m[j] = [m[j][k] - m[i][k]*m[j][i]/m[i][i] for k in range(n+1)]
+
+ if m[n-1][n-1] == 0: raise ValueError('No unique solution')
+
+  # backward substitution
+ x = [0] * n
+ for i in range(n-1, -1, -1):
+  s = sum(m[i][j] * x[j] for j in range(i, n))
+  x[i] = (m[i][n] - s) / m[i][i]
+ return x
+
+ 
+def LU_Decomposition(mat,piv):
+ lower = [[0 for x in range(n)]for y in range(n)]
+ upper = [[0 for x in range(n)]for y in range(n)]
+ for i in range(n):
+  if piv:
+   temp=[]
+   for p_v in range(i,n):
+    t_val=abs(mat[p_v][i])
+    temp.append(t_val)
+   pivot_LU(mat,temp,i,lower)
+  
+  for j in range(i+1, n):
+   ratio = mat[j][i]/mat[i][i]
+   lower[j][i]=ratio
+   for k in range(n):
+    mat[j][k] = mat[j][k] - ratio * mat[i][k]
+ upper=mat[:]
+ for i in range(n):
+  for j in range(n):
+   if i==j:
+    lower[i][j]=1
+ return (lower,upper)
+  
+
+def X_calc_LU_OR_Cholesky(lower,upper,piv):
+ #forward  substitution to obtain Y where LY=b
+ y=[0]*n
+ if piv:
+  t_B=np.array(B)
+  p_m=np.array(permutation_matrix)
+  temp_B=np.dot(p_m,t_B)
+ else:
+  temp_B=B[:]
+ for i in range(n):
+  s = sum(lower[i][j] * y[j] for j in range(i+1))
+  y[i] = (temp_B[i] - s) / lower[i][i]
+ #Backward substitution to obtain X where UX=Y
+ x = [0] * n
+ for i in range(n-1, -1, -1):
+  s = sum(upper[i][j] * x[j] for j in range(i, n))
+  x[i] = (y[i] - s) / upper[i][i]
+ return x
+def Inverse_using_LU(lower,upper):
+ l_I=np.identity(n, dtype = float)
+ u_I=np.identity(n, dtype = float)
+ #calculing L inverse by creating L into Identity matrix
+ for i in range(n):
+  for j in range(n):
+   l_I[i][j]=l_I[i][j]/lower[i][i]
+  for k in range(i+1,n):
+   for m in range(n):
+    l_I[k][m]+=(l_I[i][m]*-1*lower[k][i])
+ #calculing U inverse by creating U into Identity matrix  
+ for i in reversed(range(n)):
+  for j in range(n):
+   u_I[i][j]=u_I[i][j]/upper[i][i]
+  for k in reversed(range(i)):
+   for m in range(n):
+    u_I[k][m]+=(u_I[i][m]*-1*upper[k][i])
+ return np.dot(u_I,l_I)
+ 
+   
+def Cholesky_decomposition(mat):
+ lower = [[0 for x in range(n)]for y in range(n)]
+ upper = [[0 for x in range(n)]for y in range(n)]
+ for i in range(n):
+  for j in range(i + 1):
+   sum1 = 0
+   # summation for diagnols
+   if (j == i):
+    for k in range(j):
+     sum1 += pow(lower[j][k], 2)
+    term=mat[j][j] - sum1
+    lower[j][j] =float(pow(term,0.5))
+   else:
+    for k in range(j):
+     sum1 += (lower[i][k] *lower[j][k])
+    if(lower[j][j] > 0):
+     lower[i][j] =(mat[i][j] - sum1)/lower[j][j]
+ for i in range(n):
+  for j in range(n):
+   upper[i][j]=lower[j][i]
+ return (lower,upper)
+ 
+ 
+if option=='a':
+ print("The unknown X matrix:-")
+ print(gaussian_elimination_with_scaled_pivot(augmented_arr))
+ print("The permutation matrix:- ")
+ print(permutation_matrix)
+ print("The elments of U in augmented matrix format:-")
+ print(augmented_arr)
+
+elif option=='b':
+ lower,upper=LU_Decomposition(arr,0)
+ print("The elements of L matrix:- ")
+ print(lower)
+ print("The elements of U matrix:- ")
+ print(upper)
+ print("The unknown X matrix:-")
+ print(X_calc_LU_OR_Cholesky(lower,upper,0))
+ print("The inverse of matrix A using LU:- ")
+ print(Inverse_using_LU(lower,upper))
+
+elif option=='c':
+ lower,upper=LU_Decomposition(arr,1)
+ print("The elements of L matrix:- ")
+ print(lower)
+ print("The elements of U matrix:- ")
+ print(upper)
+ print("The permutation matrix:- ")
+ print(permutation_matrix)
+ print("The unknown X matrix:-")
+ print(X_calc_LU_OR_Cholesky(lower,upper,1))
+ print("The inverse of matrix A using LU:- ")
+ p_m=np.array(permutation_matrix)
+ print(np.dot(Inverse_using_LU(lower,upper),p_m))
+ 
+elif option=='d':
+ lower,upper=Cholesky_decomposition(arr)
+ print("The elements of Cholesky factor L matrix:- ")
+ print(lower)
+ print("The elements of Cholesky factor L transpose matrix:- ")
+ print(upper)
+ print("The unknown X matrix:-")
+ print(X_calc_LU_OR_Cholesky(lower,upper,0))
+ 
+else:
+ print("INVALID OPTION")
+ 
+ 
+
+
+ 
+ 
+
+
+
